@@ -365,11 +365,11 @@ class ListMenu extends Component{
             <Col style={{marginLeft: 20}}>
             </Col>
             <Col>
-            {this.props.bill.map((item)=>{
+            {/* {this.props.bill.map((item)=>{
                 console.log(item);
                 
                 
-            })}
+            })} */}
             <Text>Sub Total</Text>
             <Text>Discount</Text>
             <Text>Service Charge(5%)</Text>
@@ -378,10 +378,10 @@ class ListMenu extends Component{
             </Col>
             <Col>
             <Text>{this.state.subTotal}</Text>
-            <Text>{this.props.bill.payload}</Text>
             <Text>{this.state.discount}</Text>
-            <Text>{this.state.serviceCharge}</Text>
             <Text></Text>
+            <Text>{this.state.serviceCharge}</Text>
+            
             <Text>{this.state.tax}</Text>
             <Text style={{fontWeight: 'bold'}}>{this.state.total}</Text>
             </Col>
