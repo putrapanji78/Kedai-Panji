@@ -9,24 +9,39 @@ import {StatusBar, Image, StyleSheet, Dimensions, ScrollView, ImageBackground, T
 import axios from 'axios';
 import { connect } from 'react-redux';
 import { getCategories, getCategoriesPending } from '../_actions/categories'
-import {getMenus, removeMenus} from '../_actions/menus'
+import {getMenus, removeMenus, clearMenus} from '../_actions/menus'
+import {getOrders, clearOrders} from '../_actions/orders'
 import {getMenusDb} from '../_actions/menusdb';
-import { taggedTemplateExpression } from '@babel/types';
-import { log } from 'util';
+import {getBill, clearBill} from '../_actions/viewBill';
+
+
 import Modal from 'react-native-modal';
 import { from } from 'rxjs';
+
+
 
 
 class ListMenu extends Component{
     constructor(props){
         super(props);
+       
         this.state={
             a: 0,
             nama: 0,
-            categories: [],
+            kategori: 0,
             menus:[],
             timer: 0,
             isModalVisible: false,
+            viewBill: 0,
+            subTotal: 0,
+            discount: 0,
+            serviceCharge: 0,
+            tax: 0,
+            total: 0,
+            confirm: 0,
+            status: 0,
+            idtransaksi: this.props.navigation.getParam('idTransaction'),
+            tableNumber : this.props.navigation.getParam('tableNumber'),
             photo: [
                 {
                     id: 1,
@@ -65,25 +80,12 @@ class ListMenu extends Component{
     toggleModal = () => {
         this.setState({ isModalVisible: !this.state.isModalVisible });
       };
-    confirm(){
-        Alert.alert(
-            'Confirm Order',
-            'Are you sure to order this?',
-            [
-              {
-                text: 'Cancel',
-                onPress: () => console.log('Cancel Pressed'),
-                style: 'cancel',
-              },
-              {text: 'OK', onPress: () => console.log('OK Pressed')},
-            ],
-            {cancelable: false},
-          );
-    }
+   
     componentDidMount(){
-        this.interval = setInterval(
-          () => this.setState((prevState)=> ({ timer: prevState.timer + 1 })),
+        setInterval(
+          () => this.setState({ timer: this.state.timer +1  }),
           1000
+            
         );
         this.props.dispatch(getCategoriesPending());
         axios.get('http://10.0.2.2:3000/api/v1/menus')
@@ -99,21 +101,106 @@ class ListMenu extends Component{
         //   console.log(categories)
         })
       }
-      
-      componentDidUpdate(){
-        // if(this.state.timer === 0){ 
-        //   clearInterval(this.interval);
-        // //   alert('Timeout')
-        // }
-      }
-      
+      confirm(){
+        Alert.alert(
+            'Confirm Order',
+            'Are you sure to order this?',
+            [
+              {
+                text: 'Cancel',
+                onPress: () => console.log('Cancel Pressed'),
+                style: 'cancel',
+              },
+              {text: 'OK', onPress: () => 
+              this.props.menus.map((item)=>{
+            axios.post('http://10.0.2.2:3000/api/v1/order',{
+                'qty': item.qty,
+                'price': item.price,
+                'status': item.status,
+                'menu_Id': item.id,
+                'transactions_Id': item.idtransaksi,
+            })
+            .then(res => {
+                this.props.dispatch(clearMenus())
+                const idOrder= res.data.Order.id;
+                this.state.subTotal = this.state.subTotal+(item.qty*item.price)
+                this.state.confirm=1;
+                setTimeout(() => {
+                    // write your functions    
+                    axios.patch(`http://10.0.2.2:3000/api/v1/order/${idOrder}`,{
+                        "status": 1
+                    })
+                    this.state.status=1;
+                 },10000);
+
+              })
+           
+        })
+            },
+            ],
+            {cancelable: false},
+          );
+    }
+    callBill=()=>{
+        
+        axios.patch(`http://10.0.2.2:3000/api/v1//transaction/${this.state.idtransaksi}`,{
+            "tableNumber": this.state.tableNumber,
+            "finishedTime": this.state.timer,
+            "subtotal": this.state.subTotal,
+            "discount": this.state.discount,
+            "serviceCharge": this.state.serviceCharge,
+            "tax": this.state.tax,
+            "total": this.state.total
+        }).then(res=>{
+            // if(res.data.Pesan==="Sukses"){
+                
+            // }
+            
+            
+        })
+        
+       
+    }
+   
       componentWillUnmount(){
        clearInterval(this.interval);
       }
+      getCategories=(menusdb)=>{
+          this.setState({kategori: menusdb})
+      }
+      
+      getOrders=()=>{
+          this.state.isModalVisible ? 
+        null : 
+         setInterval(() => {
+        
+            axios.get(`http://10.0.2.2:3000/api/v1/orderByTransaction/${this.state.idtransaksi}`)
+            .then(res => {
+           
+            const orders = res.data;
+            this.props.dispatch(getOrders(orders)) 
+            
+            //  console.log(orders);
+            // var bill= this.props.dispatch(getBill(orders));
+            // console.log(bill);
+            
+            
+        })
+        
+         },2000)
+      }
+      
     render(){
         const {navigation} = this.props;
         const tableNumber = navigation.getParam('tableNumber', 0)
-        console.log(this.props.menus)
+        
+        this.state.discount = this.state.subTotal*0.1
+        this.state.serviceCharge = this.state.subTotal*0.05
+        this.state.tax = this.state.subTotal*0.05
+        this.state.total= (this.state.subTotal-this.state.discount)+ this.state
+        .tax+this.state.serviceCharge
+        
+        // this.props.menus.length==0?null:console.log(this.props.menus[0].idtransaksi)
         return(
             
             <View style={styles.container}>
@@ -122,52 +209,84 @@ class ListMenu extends Component{
               <View style={{backgroundColor:'#7f0627'}}>
               <View style={{flexDirection: 'row'}}>
               
-              <Text style={{fontWeight:'bold', color: 'white'}}>Table Number: {tableNumber}</Text>
+              <Text style={{fontWeight:'bold', color: 'white'}}>Table Number {tableNumber}</Text>
               <Text style={{fontWeight:'bold', marginLeft: 210, color:'white'}}>Time: {this.state.timer}</Text>
               </View>
               <View style={styles.navigation}>
               
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <TouchableOpacity onPress={()=> this.getCategories(0)}>
+                            <Text style={styles.navitem}>Semua Masakan</Text>
+                        </TouchableOpacity>
                       {this.props.menusdb.data.map(menusdb =>{
+                          
+                          
                           return(
-                            <TouchableOpacity onPress={()=> this.setState()}>
+                              
+                           
+                            <TouchableOpacity onPress={()=> this.getCategories(menusdb.id)}>
                             <Text style={styles.navitem}>{menusdb.name}</Text>
                         </TouchableOpacity>
                           );
                       })}
                   </ScrollView>
+                  
                   </View>
                   </View>
                   <View style={{marginTop: 23, height: 300, width: '100%'}}>
                       <ScrollView>
               {this.props.categories.data.map(categories=>{
                   
-            return(
+                // console.log(categories);
+                if(this.state.kategori===0){
+                    return(
                 
-                <TouchableOpacity 
-                onPress={()=> {
-                    this.props.dispatch(getMenus(categories)),
-                    this.setState({a:1})
-                    }} style={{width: '100%', margin: 10, flexDirection: 'row'}}>
-                <Image  style={{width: '50%', height: 100}} source={this.state.photo[categories.id-1].Image}/>
+                        <TouchableOpacity 
+                        onPress={()=> {
+                            this.props.dispatch(getMenus({...categories,idtransaksi: this.state.idtransaksi})),
+                            this.setState({a:1}), this.props.dispatch(getBill({...categories}))
+                            }} style={{width: '100%', margin: 10, flexDirection: 'row'}}>
+                        <Image  style={{width: '50%', height: 100}} source={this.state.photo[categories.id-1].Image}/>
+                        
+                        <View style={{margin: 20}}>
+                        <Text style={{fontWeight:'bold'}}>{categories.name}</Text>
+                        <Text style={{fontWeight:'bold'}}>{categories.price}</Text>
+                        </View>
+                        </TouchableOpacity>
+                    );
+                }
+                if(this.state.kategori===categories.categories_id){
+                    return(
                 
-                <View style={{margin: 20}}>
-                <Text style={{fontWeight:'bold'}}>{categories.name}</Text>
-                <Text style={{fontWeight:'bold'}}>{categories.price}</Text>
-                </View>
-                </TouchableOpacity>
-            );
+                        <TouchableOpacity 
+                        onPress={()=> {
+                            this.props.dispatch(getMenus({...categories,idtransaksi: this.state.idtransaksi})),
+                            this.setState({a:1}), this.props.dispatch(getBill({...categories, idtransaksi: this.state.idtransaksi}))
+                            }} style={{width: '100%', margin: 10, flexDirection: 'row'}}>
+                        <Image  style={{width: '50%', height: 100}} source={this.state.photo[categories.id-1].Image}/>
+                        
+                        <View style={{margin: 20}}>
+                        <Text style={{fontWeight:'bold'}}>{categories.name}</Text>
+                        <Text style={{fontWeight:'bold'}}>{categories.price}</Text>
+                        </View>
+                        </TouchableOpacity>
+                    );
+                }
+                  
+                  
+            
             
         })}
         </ScrollView>
-</View>
+</View>        
             <View style={{backgroundColor: '#7f0627', marginTop: 20}}>
             <View style={{height: 100, marginTop: 30}}>
             <ScrollView horizontal style={{backgroundColor: 'white'}} showsHorizontalScrollIndicator={false}>
                     {this.props.menus.map((item)=>{
-                        // console.log(item)
-                        // console.log(this.state.orders[this.state.index-1])
-                        // console.log(this.state.orders[index])
+                       
+                        
+                        
+                      
                         return(
                             <TouchableOpacity 
                             onPress={()=>{
@@ -200,35 +319,57 @@ class ListMenu extends Component{
 <View style={{ flex: 1}}>
         
         <Modal isVisible={this.state.isModalVisible}>
+       
           <View style={{ height: 500, width: 350, backgroundColor: 'white', marginLeft: 20}}>
-          <Button onPress={this.toggleModal} style={{backgroundColor: '#7f0627'}}><Text style={{textAlign:'right'}}>X</Text></Button>
+          <Button onPress={()=> {this.toggleModal(), this.setState({viewBill: false})}} style={{backgroundColor: '#7f0627'}}><Text style={{textAlign:'right'}}>X</Text></Button>
             <Text style={{textAlign: 'center', fontWeight:'bold'}}>17 August 2019, 20.09</Text>
-            <View style={{marginTop: 20, flexDirection: 'row'}}>
+            {/* {console.log(this.props.categories)} */}
+            <ScrollView style={{height: 300}}>
+         
+            {this.props.bill.length===0? null : this.props.orders.map((item)=>{
+               
+             
+               
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                if(item.transactions_Id===this.state.idtransaksi){
+
+                    return(
+                    
+                        <View style={{marginTop: 20, flexDirection: 'row'}}>
+                        <Col style={{marginLeft: 20}}>
+                        
+                        <Text style={{color: item.status==0 ? 'red' : 'green', fontWeight: 'bold'}}>{item.status==0 ? 'Waiting' : 'Sent'}</Text>
+                        </Col>
+                        <Col style={{marginRight: 20}}>
+                        <Text>{this.props.categories.data[item.menu_Id-1].name}</Text>
+                        </Col>
+                        <Col>
+                        <Text>{item.price}</Text>
+                        </Col>
+                        </View>
+                    );  
+                }
+                
+            })}
+            </ScrollView>
+           
+            <View style={{flexDirection: 'row', backgroundColor:'#eff7ef'}}>
             <Col style={{marginLeft: 20}}>
-            <Text style={{color: 'red', fontWeight: 'bold'}}>Waiting</Text>
-            </Col>
-            <Col style={{marginRight: 20}}>
-            <Text>Nasi Padang</Text>
             </Col>
             <Col>
-            <Text>30000</Text>
-            </Col>
-            </View>
-            <View style={{marginTop: 20, flexDirection: 'row'}}>
-            <Col style={{marginLeft: 20}}>
-            <Text style={{color: 'green', fontWeight: 'bold'}}>Send</Text>
-            </Col>
-            <Col style={{marginRight: 20}}>
-            <Text>Nasi Padang</Text>
-            </Col>
-            <Col>
-            <Text>30000</Text>
-            </Col>
-            </View>
-            <View style={{marginTop: 90, flexDirection: 'row', backgroundColor:'#eff7ef'}}>
-            <Col style={{marginLeft: 20}}>
-            </Col>
-            <Col>
+            {this.props.bill.map((item)=>{
+                console.log(item);
+                
+                
+            })}
             <Text>Sub Total</Text>
             <Text>Discount</Text>
             <Text>Service Charge(5%)</Text>
@@ -236,23 +377,26 @@ class ListMenu extends Component{
             <Text style={{fontWeight: 'bold'}}>Total</Text>
             </Col>
             <Col>
-            <Text>60000</Text>
-            <Text>0</Text>
-            <Text>5000</Text>
+            <Text>{this.state.subTotal}</Text>
+            <Text>{this.props.bill.payload}</Text>
+            <Text>{this.state.discount}</Text>
+            <Text>{this.state.serviceCharge}</Text>
             <Text></Text>
-            <Text>5000</Text>
-            <Text style={{fontWeight: 'bold'}}>50000</Text>
+            <Text>{this.state.tax}</Text>
+            <Text style={{fontWeight: 'bold'}}>{this.state.total}</Text>
             </Col>
             </View>
-            <TouchableOpacity style={styles.buttonmodal}><Text style={{color:'white', textAlign: 'center', fontWeight:'bold'}}>CALL BILL</Text></TouchableOpacity>
+            
+            <TouchableOpacity disabled={this.state.status===0? true: false} style={styles.buttonmodal} onPress={()=> {this.callBill(),this.toggleModal(), this.props.dispatch(clearBill()) ,this.props.navigation.navigate('Invoice',{tableNumber: this.state.tableNumber})}}><Text style={{color:'white', textAlign: 'center', fontWeight:'bold'}}>CALL BILL</Text></TouchableOpacity>
           </View>
+         
         </Modal>
       </View>
               
                 <View style={{flexDirection: 'row', marginBottom: 20}}>
-                    <Col><TouchableOpacity disabled={(this.props.menus.length==0? true : false)} style={styles.buttoncontainer} onPress={()=> this.confirm()}><Text style={styles.buttontext}>CONFIRM</Text></TouchableOpacity></Col>
-                    <Col><TouchableOpacity style={styles.buttoncontainer}><Text style={styles.buttontext}>CALL</Text></TouchableOpacity></Col>
-                    <Col><TouchableOpacity style={styles.buttoncontainer} onPress={this.toggleModal}><Text style={styles.buttontext}>VIEW BILL</Text></TouchableOpacity></Col>
+                    <Col><TouchableOpacity disabled={(this.props.menus.length==0? true : false)} style={styles.buttoncontainer} onPress={()=> {this.confirm()}}><Text style={styles.buttontext}>CONFIRM</Text></TouchableOpacity></Col>
+                    <Col><TouchableOpacity onPress={()=> this.props.dispatch(clearBill())}  disabled={(this.props.menus.length==0? true : false)}style={styles.buttoncontainer}><Text style={styles.buttontext}>CALL</Text></TouchableOpacity></Col>
+                    <Col><TouchableOpacity disabled={(this.state.confirm===0? true: false)} style={styles.buttoncontainer} onPress={()=>{this.toggleModal(),this.getOrders()}}><Text style={styles.buttontext}>VIEW BILL</Text></TouchableOpacity></Col>
                 </View>
                 </View>
               </View>
@@ -264,7 +408,9 @@ const mapStateToProps = (state) => {
     return {
       categories: state.categories,
       menus : state.menus,
-      menusdb : state.menusdb
+      menusdb : state.menusdb,
+      orders : state.orders,
+      bill : state.bill
     }
   }
   export default connect(mapStateToProps)(ListMenu);

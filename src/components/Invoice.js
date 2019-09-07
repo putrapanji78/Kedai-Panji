@@ -13,42 +13,35 @@ class HomeKedai extends Component{
         super(props);
         this.state={
             tableNumber: 0,
-            data: []
+            data: [],
+            timer: 30
         }
     }
+    componentDidMount(){
+        this.interval = setInterval(
+          () => this.setState((prevState)=> ({ timer: prevState.timer - 1 })),
+          1000
+        );
+      }
+      componentDidUpdate(){
+        if(this.state.timer === 0){ 
+          clearInterval(this.interval);
+          this.props.navigation.navigate('HomeKedai');
+        }
+      }
+      
+      componentWillUnmount(){
+       clearInterval(this.interval);
+      }
     render(){
         return(
             <View style={styles.container}>
               <StatusBar backgroundColor='#7f0627' barStyle="light-content" />
              
-                <Text style={styles.texttitle}>Masukan Nomor Meja</Text>
-                <TextInput keyboardType={"number-pad"} placeholder="Nomor Meja" style={styles.input} onChangeText={(tableNumber) => this.setState({tableNumber: tableNumber})} value={this.state.tableNumber}/>
-                
-                <TouchableOpacity style={styles.buttoncontainer} onPress={()=> {
-               if(this.state.tableNumber === 0){
-                   alert('Enter Your Number');
-               }else{
-               
-                axios.post(`http://10.0.2.2:3000/api/v1/transaction`,{
-                    'tableNumber': this.state.tableNumber
-                } )
-                .then(res =>{
-                  const data = res.data;
-                  this.setState({data});
-                  console.log(data);
-                  
-                  if(this.state.data.Transactions.tableNumber!=null){
-                    this.props.navigation.navigate('ListMenu', {tableNumber: this.state.data.Transactions.tableNumber, idTransaction: data.Transactions.id});
-                    
-                  }
-                 
-                  
-                })
-               }
-            }
-               }>
-           <Text style={styles.buttontext} >Submit</Text>
-           </TouchableOpacity>
+                <Text style={styles.textregister}>PLEASE BRING THE PHONE TO THE CASHRIER TO PROCEED WITH THE PAYMENT</Text>
+                <Text style={styles.texttitle}>#{this.props.navigation.getParam('tableNumber')}</Text>
+                <Text style={styles.texttitle}>THANK YOU</Text>
+                <Text style={styles.texttitle}>TIME SPENT:{this.state.timer}</Text>
           
           
               </View>
@@ -98,7 +91,7 @@ const styles = {
     texttitle:{
         textAlign : 'center',
         color : '#ffffff',
-        fontSize : 35,
+        fontSize : 36,
         marginBottom : 20
     }
 }

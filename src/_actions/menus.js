@@ -1,7 +1,7 @@
 export const getMenus = (menus) => {
     return {
       type: 'GET_MENUS',
-      payload: {...menus,qty:1}
+      payload: {...menus,qty:1,status: 0}
     }
   }
   
@@ -11,3 +11,9 @@ export const getMenus = (menus) => {
       payload: menus
     }
   }
+  export const clearMenus = () => {
+    return {
+      type: 'CLEAR_MENUS'
+    }
+  }
+  

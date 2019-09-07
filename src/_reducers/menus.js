@@ -27,7 +27,10 @@ const initialState =[]
                         )
               }
           }
+        
       }
+      case 'CLEAR_MENUS':
+        return state=[];
       default:
         return state;
     }
