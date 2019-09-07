@@ -21,7 +21,8 @@ class HomeKedai extends Component{
             <View style={styles.container}>
               <StatusBar backgroundColor='#7f0627' barStyle="light-content" />
              
-                <Text style={styles.texttitle}>Masukan Nomor Meja</Text>
+                <Text style={styles.texttitle}>KEDAI PANJI</Text>
+                <Text style={styles.textregister}>masukan nomor meja</Text>
                 <TextInput keyboardType={"number-pad"} placeholder="Nomor Meja" style={styles.input} onChangeText={(tableNumber) => this.setState({tableNumber: tableNumber})} value={this.state.tableNumber}/>
                 
                 <TouchableOpacity style={styles.buttoncontainer} onPress={()=> {
